@@ -1,17 +1,40 @@
 version: 2.1
-
-jobs:
-  hello-job:
-    docker:
-      - image: cimg/node:17.2.0 # the primary container, where your job's commands are run
-        auth:
-          username: mydockerhub-user
-          password: $DOCKERHUB_PASSWORD  # context / project UI env-var reference
-    steps:
-      - checkout # check out the code in the project directory
-      - run: echo "hello world" # run the `echo` command
-
+orbs:
+    unity: game-ci/unity@1.3.0
+parameters:
+    editor-version:
+        description: "The unity version to use"
+        type: string
+        default: "2021.3.13f1"
+    build-name:
+        description: "The name of the build"
+        type: string
+        default: "Build"
 workflows:
-  my-workflow:
-    jobs:
-      - hello-job
+    ## Uncomment this job if you need to activate a PERSONAL license for Unity. We probably can create some kind of script to check if
+    ## Unity is already activated and just execute this job if it isn't.
+    ## For more information about activation, check: https://game.ci/docs/circleci/activation
+    # create-unity-activation-file:
+    #     jobs:
+    #         - unity/create-activation-file:
+    #             editor_version: << pipeline.parameters.editor-version >>
+    build:
+        jobs:
+            # Windows Build
+            - unity/build:
+                filters:
+                  branches:
+                    only:
+                        - main
+                executor:
+                    name: "unity/windows-2019"
+                    target_platform: "windows-il2cpp"
+                    editor_version: << pipeline.parameters.editor-version >>
+                name: "<< pipeline.parameters.build-name >>-windowsx64-il2cpp"
+                build-name: ""
+                project-path: .
+                build-target: StandaloneWindows64
+                compress: true
+                custom-parameters: ""
+                store-artifacts: true
+                context: unity-personal
