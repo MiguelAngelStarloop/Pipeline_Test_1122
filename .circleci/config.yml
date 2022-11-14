@@ -1,17 +1,13 @@
 # For a full documentation, check: https://circleci.com/docs/
 # For a reference of all available configutations keys, check: https://circleci.com/docs/configuration-reference/
-​
+
 # The CircleCI version to use
 version: 2.1
-​
-​
 # Orbs to use. You can think of them as "libraries" that you can import and use pre-defined commands/jobs.
 # You can search for orbs here: https://circleci.com/developer/orbs
 orbs:
     # The "key" of the orb can be anything
     win: circleci/windows@5.0.0
-​
-​
 # We can define parameters to use as variables in our config. Check this link for more details: https://circleci.com/docs/reusing-config/#using-the-parameters-declaration
 parameters:
     # Here we are defining a paramenter called "test-value"
@@ -22,8 +18,6 @@ parameters:
         default: 10
         # And we can also add a description to most elements, which CircleCI uses to generate documentation
         description: "A test value for testing purposes"
-​
-​
 # Commands are a collection of "steps" that can be reused
 commands:
     # Here we are defining a command called "print-test-values"
@@ -43,8 +37,6 @@ commands:
             # "TEST_VAR" is a variable that was defined in the project settings inside CircleCI web UI.
             # Note that printing environment variables will show them as redacted in CircleCI
             - run: echo $env:TEST_VAR
-​
-​
 # Jobs are a collection of "steps" that runs commands or scripts.
 jobs:
     # Here we are creating a job called "build"
@@ -82,8 +74,6 @@ jobs:
             name: win/default
         steps:
             - run: echo "Build has finished"
-​
-​
 # Workflows defines a list of jobs and their execution order.
 workflows:
     # Here we're creating a workflow called "hello-world"
