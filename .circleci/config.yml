@@ -11,13 +11,10 @@ parameters:
         type: string
         default: "Build"
 workflows:
-    ## Uncomment this job if you need to activate a PERSONAL license for Unity. We probably can create some kind of script to check if
-    ## Unity is already activated and just execute this job if it isn't.
-    ## For more information about activation, check: https://game.ci/docs/circleci/activation
-    # create-unity-activation-file:
-    #     jobs:
-    #         - unity/create-activation-file:
-    #             editor_version: << pipeline.parameters.editor-version >>
+        create-unity-activation-file:
+            jobs:
+            unity/create-activation-file:
+            editor_version: << pipeline.parameters.editor-version >>
     build:
         jobs:
             # Windows Build
