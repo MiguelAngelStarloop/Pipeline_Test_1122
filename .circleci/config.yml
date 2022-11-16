@@ -29,7 +29,7 @@ workflows:
                 executor:
                     name: "unity/windows-2019"
                     target_platform: "windows-il2cpp"
-                    editor_version: << pipeline.parameters.editor-version >>
+                    editor_version: 2021.3.13f1
                 name: "<< pipeline.parameters.build-name >>-windowsx64-il2cpp"
                 build-name: ""
                 project-path: .
