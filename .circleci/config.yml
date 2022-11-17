@@ -1,41 +1,170 @@
 version: 2.1
-
+​
 orbs:
     unity: game-ci/unity@1.3.0
-    
+    aws-cli: circleci/aws-cli@3.1.3
+    slack: circleci/slack@4.10.1
+​
 parameters:
     editor-version:
         description: "The unity version to use"
         type: string
-        default: "2021.3.8f1"
+        default: "2021.3.13f1"
     build-name:
-        description: "The name of the build"
+        description: "The name of the build. If empty, the build will be named after the target platform. "
         type: string
-        default: "Build"
-        
+        default: ""
+    target-platform:
+        description: "Which platform to build to"
+        enum:
+            - android
+            - base
+            - ios
+            - linux-il2cpp
+            - mac-mono
+            - webgl
+            - windows-mono
+        type: enum
+        default: android
+    build-target:
+        description: "Which platform to build to"
+        type: string
+        default: "Android"
+    executor-name:
+        description: "Which executor to use"
+        type: string
+        default: "unity/ubuntu"
+    project-path:
+        description: "Relative path for the project"
+        type: string
+        default: "."
+​
+commands:
+    notify-slack-success:
+        parameters:
+            branch_pattern:
+                type: string
+                default: "main"
+        steps:
+            - slack/notify:
+                branch_pattern: <<parameters.branch_pattern>>
+                event: pass
+                template: "basic_success_1"
+    notify-slack-fail:
+        parameters:
+            branch_pattern:
+                type: string
+                default: "main"
+        steps:
+            - slack/notify:
+                branch_pattern: <<parameters.branch_pattern>>
+                event: fail
+                template: "basic_fail_1"
+​
+jobs:
+    build-project:
+        executor:
+            name: <<pipeline.parameters.executor-name>>
+            target_platform: <<pipeline.parameters.target-platform>>
+            editor_version: <<pipeline.parameters.editor-version>>
+        steps:
+            - checkout
+            - unity/prepare-env:
+                project-path: <<pipeline.parameters.project-path>>
+            - unity/build:
+                build-name: <<pipeline.parameters.build-name>>
+                build-target: <<pipeline.parameters.build-target>>
+                custom-parameters: "-BuildOptions Development"
+                project-path: <<pipeline.parameters.project-path>>
+                store-artifacts: false
+            - persist_to_workspace:
+                root: <<pipeline.parameters.project-path>>
+                paths:
+                  - "Builds/<<pipeline.parameters.build-target>>"
+            - notify-slack-fail
+​
+    upload-to-aws-bucket:
+        executor: aws-cli/default
+        parameters:
+            project-path:
+                type: string
+            build-target:
+                type: string
+            build-name:
+                type: string
+        steps:
+            - attach_workspace:
+                at: <<pipeline.parameters.project-path>>
+            - aws-cli/setup
+            - aws-cli/role-arn-setup:
+                profile-name: circleci
+                role-arn: "arn:aws:iam::992660079108:role/circleci_role"
+                source-profile: default
+            - run:
+                name: "Before deletion"
+                command: aws s3 ls $BUCKET --profile circleci --recursive --human-readable --summarize
+            - run: aws s3 rm $BUCKET/Builds/ --profile circleci --recursive
+            - run:
+                name: "Afrter deletion"
+                command: aws s3 ls $BUCKET --profile circleci --recursive --human-readable --summarize
+            - run: aws s3 cp <<parameters.project-path>>/Builds/<<parameters.build-target>> $BUCKET/Builds/<<parameters.build-target>> --profile circleci --recursive
+            - run:
+                name: "After upload"
+                command: aws s3 ls $BUCKET --profile circleci --recursive --human-readable --summarize
+            - notify-slack-fail
+            - notify-slack-success
+​
 workflows:
-        
-    create-unity-activation-file:
-        jobs:
-            - unity/create-activation-file:
-                editor_version: 2021.3.13f1            
+    # # Uncomment this job if you need to activate a PERSONAL license for Unity. We probably can create some kind of script to check if
+    # # Unity is already activated and just execute this job if it isn't.
+    # # For more information about activation, check: https://game.ci/docs/circleci/activation
+    # create-unity-activation-file:
+    #     jobs:
+    #         - unity/create-activation-file:
+    #             editor_version: <<pipeline.parameters.editor-version>>
     build:
         jobs:
-            # Windows Build
-            - unity/build:
+            # # Run Tests
+            # - unity/test:
+            #     name: "editmode-tests"
+            #     executor:
+            #         name: <<pipeline.parameters.executor-name>>
+            #         target_platform: <<pipeline.parameters.target-platform>>
+            #         editor_version: <<pipeline.parameters.editor-version>>
+            #     project-path: <<pipeline.parameters.project-path>>
+            #     test-platform: "editmode"
+            #     context: unity-personal
+​
+            # - unity/test:
+            #     name: "playmode-tests"
+            #     executor:
+            #         name: <<pipeline.parameters.executor-name>>
+            #         target_platform: <<pipeline.parameters.target-platform>>
+            #         editor_version: <<pipeline.parameters.editor-version>>
+            #     project-path: <<pipeline.parameters.project-path>>
+            #     test-platform: "playmode"
+            #     context: unity-personal
+​
+            # Build Player
+            - build-project:
+                # requires:
+                #   - editmode-tests
+                #   - playmode-tests
                 filters:
                   branches:
                     only:
                         - main
-                executor:
-                    name: "unity/windows-2019"
-                    target_platform: "windows-il2cpp"
-                    editor_version: 2021.3.13f1
-                name: "<< pipeline.parameters.build-name >>-windowsx64-il2cpp"
-                build-name: ""
-                project-path: .
-                build-target: StandaloneWindows64
-                compress: true
-                custom-parameters: ""
-                store-artifacts: true
-                context: unity-personal
+                context: 
+                    - unity-personal
+                    - slack
+​
+            # Copy build to S3 bucket
+            - upload-to-aws-bucket:
+                requires:
+                  - build-project
+                project-path: <<pipeline.parameters.project-path>>
+                build-target: <<pipeline.parameters.build-target>>
+                build-name: <<pipeline.parameters.build-name>>
+                context: 
+                    - aws
+                    - slack
