@@ -4,19 +4,8 @@ orbs:
     unity: game-ci/unity@1.3.0
 
 workflows:
-   create-unity-activation-file:
-     jobs:
-       - unity/create-activation-file:
-           editor_version: 2022.1.11f1
-     build:
+     create-unity-activation-file:
          jobs:
-            Run Tests
-           - unity/test:
-                 name: "editmode-tests"
-                 executor:
-                      name: <<pipeline.parameters.executor-name>>
-                      target_platform: <<pipeline.parameters.target-platform>>
-                      editor_version: <<pipeline.parameters.editor-version>>
-                  project-path: <<pipeline.parameters.project-path>>
-                  test-platform: "editmode"
-                  context: unity-personal
+             - unity/create-activation-file:
+                 editor_version: <<pipeline.parameters.editor-version>>
+
