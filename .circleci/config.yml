@@ -8,3 +8,8 @@ workflows:
     jobs:
       - unity/create-activation-file:
           editor_version: 2021.2.13f1
+          
+            build-unity-project:
+    jobs:
+      - unity/build:
+          build-name: 'MyUnityProject'
