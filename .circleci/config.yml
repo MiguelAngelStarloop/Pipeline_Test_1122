@@ -8,7 +8,8 @@ workflows:
   create-unity-activation-file:
     jobs:
       - unity/create-activation-file
-       - unity/build:
+      build:
+        - unity/build:
           name: 'build-android'
           step-name: 'Build Android'
           unity-license-var-name: 'UNITY_ENCODED_LICENSE'
