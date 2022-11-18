@@ -11,7 +11,7 @@ workflows:
      build:
          jobs:
             Run Tests
-            - unity/test:
+           - unity/test:
                  name: "editmode-tests"
                  executor:
                       name: <<pipeline.parameters.executor-name>>
